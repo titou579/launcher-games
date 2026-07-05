@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SlingBox Archer</title>
+    <style>
+        body {
+            margin: 0; padding: 0; background-color: #14532d;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; touch-action: none;
+        }
+        #game-container { position: relative; width: 100%; height: 100%; max-width: 800px; max-height: 500px; }
+        canvas { background-color: #166534; border-radius: 12px; width: 100%; height: 100%; }
+        #hud { position: absolute; top: 15px; left: 15px; color: #fff; font-size: 18px; font-weight: bold; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="hud">Flèches: <span id="ammo">8</span> | Caisses: <span id="score">0</span></div>
+        <canvas id="slingCanvas" width="800" height="500"></canvas>
+    </div>
+
+<script>
+const canvas = document.getElementById("slingCanvas");
+const ctx = canvas.getContext("2d");
+
+let score = 0; let ammo = 8; let gameOver = false;
+const sling = { x: 120, y: 250 };
+let isDragging = false; let mouse = { x: 0, y: 0 };
+let projectile = { x: 120, y: 250, vx: 0, vy: 0, radius: 8, fired: false, inFlight: false };
+let boxes = [];
+
+function spawnBoxes() {
+    boxes = [];
+    for (let i = 0; i < 4; i++) {
+        boxes.push({ x: 550 + (Math.random() * 80), y: 100 + (i * 85), width: 50, height: 50, alive: true });
+    }
+}
+spawnBoxes();
+
+function getMousePos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+}
+
+function startDrag(e) {
+    if (gameOver || projectile.inFlight || ammo <= 0) return;
+    const pos = getMousePos(e);
+    if (Math.hypot(pos.x - sling.x, pos.y - sling.y) < 60) { isDragging = true; mouse = pos; }
+}
+function dragMove(e) { if (isDragging) mouse = getMousePos(e); }
+function endDrag() {
+    if (!isDragging) return; isDragging = false;
+    projectile.x = sling.x; projectile.y = sling.y;
+    projectile.vx = (sling.x - mouse.x) * 0.15; projectile.vy = (sling.y - mouse.y) * 0.15;
+    projectile.fired = true; projectile.inFlight = true; ammo--;
+    document.getElementById("ammo").innerText = ammo;
+}
+
+canvas.addEventListener("mousedown", startDrag); window.addEventListener("mousemove", dragMove); window.addEventListener("mouseup", endDrag);
+canvas.addEventListener("touchstart", startDrag); window.addEventListener("touchmove", dragMove); window.addEventListener("touchend", endDrag);
+
+function update() {
+    if (projectile.inFlight) {
+        projectile.x += projectile.vx; projectile.y += projectile.vy; projectile.vy += 0.2;
+        for (let box of boxes) {
+            if (box.alive && projectile.x > box.x && projectile.x < box.x + box.width && projectile.y > box.y && projectile.y < box.y + box.height) {
+                box.alive = false; score += 10; document.getElementById("score").innerText = score;
+            }
+        }
+        if (projectile.x > canvas.width || projectile.y > canvas.height || projectile.x < 0) {
+            projectile.inFlight = false; projectile.fired = false;
+            if (!boxes.some(b => b.alive)) { ammo += 4; document.getElementById("ammo").innerText = ammo; spawnBoxes(); }
+            else if (ammo <= 0) gameOver = true;
+        }
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#374151"; ctx.beginPath(); ctx.arc(sling.x, sling.y, 8, 0, Math.PI * 2); ctx.fill();
+
+    if (isDragging) {
+        let simX = sling.x, simY = sling.y, simVx = (sling.x - mouse.x) * 0.15, simVy = (sling.y - mouse.y) * 0.15;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        for (let i = 0; i < 20; i++) { simX += simVx; simY += simVy; simVy += 0.2; ctx.beginPath(); ctx.arc(simX, simY, 3, 0, Math.PI * 2); ctx.fill(); }
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sling.x, sling.y - 30); ctx.lineTo(mouse.x, mouse.y); ctx.lineTo(sling.x, sling.y + 30); ctx.stroke();
+    }
+
+    ctx.fillStyle = "#b45309"; ctx.strokeStyle = "#78350f"; ctx.lineWidth = 3;
+    for (let box of boxes) {
+        if (box.alive) { ctx.fillRect(box.x, box.y, box.width, box.height); ctx.strokeRect(box.x + 4, box.y + 4, box.width - 8, box.height - 8); }
+    }
+
+    if (projectile.fired || isDragging) {
+        ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(isDragging ? mouse.x : projectile.x, isDragging ? mouse.y : projectile.y, projectile.radius, 0, Math.PI * 2); ctx.fill();
+    }
+
+    if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff"; ctx.font = "30px Arial"; ctx.textAlign = "center"; ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+    }
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+canvas.addEventListener("click", () => { if (gameOver) { score = 0; ammo = 8; gameOver = false; document.getElementById("score").innerText = score; document.getElementById("ammo").innerText = ammo; spawnBoxes(); } });
+loop();
+</script>
+</body>
+</html>
