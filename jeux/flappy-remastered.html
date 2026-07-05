@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Remastered</title>
+    <style>
+        body {
+            margin: 0; background-color: #111;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; font-family: sans-serif; overflow: hidden;
+        }
+        #game-container { position: relative; }
+        canvas { background: linear-gradient(to bottom, #1a103c, #2b1055); border: 4px solid #00ffcc; border-radius: 12px; }
+        #ui { position: absolute; top: 15px; left: 15px; color: #fff; font-size: 18px; font-weight: bold; pointer-events: none; }
+        #dash-bar { width: 100px; height: 10px; background: #333; border-radius: 5px; display: inline-block; overflow: hidden; }
+        #dash-fill { width: 100%; height: 100%; background: #00ffcc; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui">
+            <div>Score: <span id="score">0</span></div>
+            <div>Pièces: <span id="coins">0</span></div>
+            <div>Dash: <div id="dash-bar"><div id="dash-fill"></div></div></div>
+        </div>
+        <canvas id="flappyCanvas" width="500" height="600"></canvas>
+    </div>
+
+<script>
+const canvas = document.getElementById("flappyCanvas");
+const ctx = canvas.getContext("2d");
+
+let score = 0; let coins = 0; let gameOver = false;
+
+const bird = {
+    x: 80, y: 250, radius: 14, gravity: 0.4, jumpForce: -7.5, velocity: 0,
+    dashCooldown: 0, isDashing: false, dashTimer: 0
+};
+
+let obstacles = []; let coinsArray = []; let frameCount = 0;
+
+function jumpAction() {
+    if (gameOver) { resetGame(); return; }
+    if (!bird.isDashing) bird.velocity = bird.jumpForce;
+}
+
+function dashAction() {
+    if (!gameOver && bird.dashCooldown <= 0 && !bird.isDashing) {
+        bird.isDashing = true; bird.dashTimer = 10; bird.dashCooldown = 90; bird.velocity = 0;
+    }
+}
+
+window.addEventListener("keydown", (e) => {
+    if (e.key === " " || e.key === "ArrowUp") jumpAction();
+    if (e.key === "Shift" || e.key === "x") dashAction();
+});
+canvas.addEventListener("mousedown", (e) => {
+    if (e.button === 0) jumpAction();
+    if (e.button === 2) dashAction();
+});
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+
+function spawnObstacle() {
+    const gap = 140; const minH = 50; const maxH = canvas.height - gap - minH;
+    const height = Math.floor(Math.random() * (maxH - minH + 1)) + minH;
+    obstacles.push({ x: canvas.width, topHeight: height, bottomY: height + gap, width: 60, passed: false, speed: 3 });
+    if (Math.random() > 0.4) coinsArray.push({ x: canvas.width + 30, y: height + (gap / 2), radius: 8 });
+}
+
+function resetGame() {
+    bird.y = 250; bird.velocity = 0; bird.dashCooldown = 0; bird.isDashing = false;
+    obstacles = []; coinsArray = []; score = 0; gameOver = false;
+    document.getElementById("score").innerText = score; animate();
+}
+
+function update() {
+    frameCount++;
+    if (bird.dashCooldown > 0) bird.dashCooldown--;
+    document.getElementById("dash-fill").style.width = `${((90 - bird.dashCooldown) / 90) * 100}%`;
+
+    if (bird.isDashing) {
+        bird.dashTimer--; bird.x += 4;
+        if (bird.dashTimer <= 0) bird.isDashing = false;
+    } else {
+        if (bird.x > 80) bird.x -= 1;
+        bird.velocity += bird.gravity; bird.y += bird.velocity;
+    }
+
+    if (bird.y + bird.radius > canvas.height || bird.y - bird.radius < 0) gameOver = true;
+
+    if (frameCount % 100 === 0) spawnObstacle();
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i]; obs.x -= obs.speed;
+        if (bird.x + bird.radius > obs.x && bird.x - bird.radius < obs.x + obs.width) {
+            if (bird.y - bird.radius < obs.topHeight || bird.y + bird.radius > obs.bottomY) gameOver = true;
+        }
+        if (!obs.passed && obs.x + obs.width < bird.x) { obs.passed = true; score++; document.getElementById("score").innerText = score; }
+        if (obs.x + obs.width < 0) obstacles.splice(i, 1);
+    }
+
+    for (let i = coinsArray.length - 1; i >= 0; i--) {
+        let c = coinsArray[i]; c.x -= 3;
+        if (Math.hypot(bird.x - c.x, bird.y - c.y) < bird.radius + c.radius) {
+            coins++; document.getElementById("coins").innerText = coins; coinsArray.splice(i, 1); continue;
+        }
+        if (c.x + c.radius < 0) coinsArray.splice(i, 1);
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ff0055"; ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055";
+    for (let obs of obstacles) { ctx.fillRect(obs.x, 0, obs.width, obs.topHeight); ctx.fillRect(obs.x, obs.bottomY, obs.width, canvas.height - obs.bottomY); }
+
+    ctx.fillStyle = "#ffd700"; ctx.shadowColor = "#ffd700";
+    for (let c of coinsArray) { ctx.beginPath(); ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2); ctx.fill(); }
+
+    ctx.fillStyle = bird.isDashing ? "#fff" : "#00ffcc"; ctx.shadowColor = bird.isDashing ? "#fff" : "#00ffcc";
+    ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2); ctx.fill();
+    
+    ctx.fillStyle = "#111"; ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(bird.x + 5, bird.y - 3, 3, 0, Math.PI * 2); ctx.fill();
+
+    if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#ff0055"; ctx.font = "30px Arial"; ctx.textAlign = "center"; ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+    }
+}
+
+function animate() { update(); draw(); if (!gameOver) requestAnimationFrame(animate); }
+animate();
+</script>
+</body>
+</html>
