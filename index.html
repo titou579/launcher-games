@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Arcade Launcher</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #0b0f19;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* Barre latérale (Menu) */
+        #sidebar {
+            width: 280px;
+            background-color: #111827;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border-right: 2px solid #1f2937;
+            z-index: 10;
+            transition: transform 0.3s ease;
+        }
+
+        #sidebar h2 {
+            font-size: 1.4rem;
+            text-align: center;
+            margin-bottom: 15px;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 2px solid #1f2937;
+            padding-bottom: 10px;
+        }
+
+        #games-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .game-btn {
+            background-color: #1f2937;
+            color: #9ca3af;
+            border: 1px solid #374151;
+            padding: 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .game-btn:hover, .game-btn.active {
+            background: linear-gradient(135deg, #38bdf8, #0369a1);
+            color: #fff;
+            border-color: #7dd3fc;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        /* Zone d'affichage du jeu actif */
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Bouton Menu Mobile */
+        #menu-toggle {
+            display: none;
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #38bdf8;
+            color: #000;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 100;
+            cursor: pointer;
+        }
+
+        #game-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: #000;
+        }
+
+        #placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #4b5563;
+        }
+        #placeholder h3 { font-size: 1.8rem; margin-bottom: 10px; color: #6b7280; }
+
+        /* RESPONSIVE DESIGN (Téléphones) */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #sidebar {
+                position: absolute;
+                left: 0; top: 0; bottom: 0;
+                transform: translateX(-100%);
+            }
+            #sidebar.open { transform: translateX(0); }
+            #menu-toggle { display: block; }
+            #placeholder { width: 90%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <button id="menu-toggle" onclick="toggleMenu()">☰ JEUX</button>
+
+    <div id="sidebar">
+        <h2>Mon Arcade</h2>
+        <div id="games-list"></div>
+    </div>
+
+    <div id="main-content">
+        <div id="placeholder">
+            <h3>Prêt à jouer ?</h3>
+            <p>Sélectionne une création dans la liste à gauche</p>
+        </div>
+        <iframe id="game-frame" src="" style="display: none;"></iframe>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🛠️ LISTE DES JEUX (ENTIÈREMENT MODULABLE)
+        // ==========================================
+        const mesJeux = [
+            { id: "pacman", nom: "🕹️ Pac-Man Hardcore", url: "jeux/pacman/index.html" },
+            { id: "tictactoe", nom: "❌ Tic-Tac-Toe", url: "jeux/tictactoe/index.html" },
+            { id: "geoplat", nom: "🟩 Geo Platformer", url: "jeux/geo-platformer.html" },
+            { id: "flappy", nom: "🚀 Flappy Remastered", url: "jeux/flappy-remastered.html" },
+            { id: "sling", nom: "🎯 SlingBox Archer", url: "jeux/sling-box.html" }
+        ];
+
+        // Génération automatique des boutons à l'écran
+        const listContainer = document.getElementById('games-list');
+        mesJeux.forEach(jeu => {
+            const btn = document.createElement('button');
+            btn.className = 'game-btn';
+            btn.innerHTML = jeu.nom;
+            btn.onclick = (e) => loadGame(jeu.url, btn);
+            listContainer.appendChild(btn);
+        });
+
+        function loadGame(url, button) {
+            const frame = document.getElementById('game-frame');
+            const placeholder = document.getElementById('placeholder');
+            
+            placeholder.style.display = 'none';
+            frame.style.display = 'block';
+            frame.src = url;
+
+            document.querySelectorAll('.game-btn').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            // Fermer le menu sur mobile après sélection
+            document.getElementById('sidebar').classList.remove('open');
+        }
+
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+    </script>
+</body>
+</html>
