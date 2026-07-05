@@ -149,11 +149,14 @@
 
     <script>
         // ==========================================
-        // 🛠️ LISTE DES JEUX (ENTIÈREMENT MODULABLE)
+        // 🛠️ LISTE DES JEUX ENTIÈREMENT MODULABLE
         // ==========================================
         const mesJeux = [
-            { id: "pacman", nom: "🕹️ Pac-Man Hardcore", url: "jeux/pacman/index.html" },
-            { id: "tictactoe", nom: "❌ Tic-Tac-Toe", url: "jeux/tictactoe/index.html" },
+            // Tes deux jeux Node.js hébergés de leur côté sur Render
+            { id: "pacman", nom: "🕹️ Pac-Man Hardcore", url: "https://pacman-io-rl1u.onrender.com/" },
+            { id: "tictactoe", nom: "❌ Tic-Tac-Toe", url: "https://tic-tac-toe-2-1.onrender.com/" },
+            
+            // Tes trois jeux locaux qui sont parfaitement rangés dans ton dossier /jeux/
             { id: "geoplat", nom: "🟩 Geo Platformer", url: "jeux/geo-platformer.html" },
             { id: "flappy", nom: "🚀 Flappy Remastered", url: "jeux/flappy-remastered.html" },
             { id: "sling", nom: "🎯 SlingBox Archer", url: "jeux/sling-box.html" }
